@@ -3,32 +3,26 @@
 
 function [ind v] = simplex(A, b, c, m, n, x)
 
-    B = zeros(n-m, 1);
+    persistent cont = 0;
+    ind = 0;
+
+    # Índices básicos
+    B = [];
 
     k = 1;
     for j = 1:n
         if (x(j) > 0)
             B(k++) = j;
-        endif
-    endfor
-
-    [ind v] = simplexR(A, b, c, m, n, x, B);
-
-endfunction
-
-
-function [ind v] = simplexR(A, b, c, m, n, x, B)
-    
-    persistent cont = 0;
-    ind = 0;
-    k = 0;
+        end
+    end
 
     B_inv = inv(A(:, B));
 
-    cst_r = zeros(n, 1);
-
     printf('\nIterando %d\n', cont++);
     printf('-----------\n');
+
+    # Custos reduzidos
+    cst_r = [];
 
     for j = 1:n
         if (x(j) > 0)
@@ -36,24 +30,23 @@ function [ind v] = simplexR(A, b, c, m, n, x, B)
         else
             if (size(B_inv) == 0)
                 continue;
-            endif
+            end
             cst_r(j) = c(j) - (transpose(c(B)) * B_inv * A(:, j));
             if (cst_r(j) < 0)
                 ind = 1;
                 k = j;
-            endif
-        endif
-    endfor
+            end
+        end
+    end
 
-    obj = transpose(c) * x;
-    printf('\nValor função objetivo: %d\n', obj);
+    printf('\nValor função objetivo: %d\n', transpose(c) * x);
 
     printf('\nCustos reduzidos:\n');
     for j = 1:n
         if (x(j) == 0)
             printf('c%d -> %.5g\n', j, cst_r(j));
-        endif
-    endfor
+        end
+    end
 
     if (ind == 0)
         v = x;
@@ -75,26 +68,23 @@ function [ind v] = simplexR(A, b, c, m, n, x, B)
             printf('\nDireção:\n');
             for j = 1:n-m
                 printf('d%d -> %.5g\n', j, -u(j));
-            endfor
+            end
 
             printf('\nEntra da base: %d\n', l);
 
             x(k) = theta;
             for i = 1:n-m
                 x(B(i)) -= theta * u(i);
-            endfor
+            end
             x(l) = 0;
 
             A(:, B(l)) = A(:, k);
-            B(l) = k;
-            B = sort(B);
 
-            [ind v] = simplexR(A, b, c, m, n, x, B);
+            [ind v] = simplex(A, b, c, m, n, x);
 
-        endif
-    endif
-
-endfunction
+        end
+    end
+end
 
 
 function [minimo l] = get_theta(x, u, m, n, B)
@@ -104,14 +94,13 @@ function [minimo l] = get_theta(x, u, m, n, B)
     for i = 2:n-m
         if (u(i) <= 0) 
             continue;
-        endif
+        end
         valor = x(B(i)) / u(i);
         if (valor < minimo)
             [minimo l] = deal(valor, i);
-        endif
-    endfor  
-
-endfunction
+        end
+    end
+end
 
 
 function A = le_matriz(arq, m, n)
@@ -120,10 +109,9 @@ function A = le_matriz(arq, m, n)
     for i = 1:m
         for j = 1:n
             A(i, j) = fscanf(arq, '%f', 1);
-        endfor
-    endfor
-
-endfunction
+        end
+    end
+end
 
 
 # ------------------------------------------------------------- #
@@ -150,13 +138,13 @@ if (inv == -1)
 else
     custo = transpose(c) * v;
     printf('\nSolução ótima encontrada com custo %.5g:\n', custo);
-endif
+end
 
 for j = 1:n
     if (inv == -1)
         printf('d');
     else
         printf('x');
-    endif
+    end
     printf('%d -> %.5g\n', j, v(j));
-endfor
+end
