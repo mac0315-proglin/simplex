@@ -27,12 +27,12 @@ function [ind v] = simplexR(A, b, c, m, n, x, B)
 
     cst_r = zeros(n, 1);
 
-    printf("\nIterando %d\n", cont++);
-    printf("-----------\n");
+    printf('\nIterando %d\n', cont++);
+    printf('-----------\n');
 
     for j = 1:n
         if (x(j) > 0)
-            printf("x%d -> %.5g\n", j, x(j));
+            printf('x%d -> %.5g\n', j, x(j));
         else
             if (size(B_inv) == 0)
                 continue;
@@ -46,12 +46,12 @@ function [ind v] = simplexR(A, b, c, m, n, x, B)
     endfor
 
     obj = transpose(c) * x;
-    printf("\nValor função objetivo: %d\n", obj);
+    printf('\nValor função objetivo: %d\n', obj);
 
-    printf("\nCustos reduzidos:\n");
+    printf('\nCustos reduzidos:\n');
     for j = 1:n
         if (x(j) == 0)
-            printf("c%d -> %.5g\n", j, cst_r(j));
+            printf('c%d -> %.5g\n', j, cst_r(j));
         endif
     endfor
 
@@ -65,19 +65,19 @@ function [ind v] = simplexR(A, b, c, m, n, x, B)
             [ind v] = deal(-1, -u);
 
         else
-            printf("\nSai da base: %d\n", k);
+            printf('\nSai da base: %d\n', k);
 
             [theta l] = get_theta(x, u, m, n, B);
 
-            printf("\nTheta*\n");
-            printf("%.5g\n", theta);
+            printf('\nTheta*\n');
+            printf('%.5g\n', theta);
 
-            printf("\nDireção:\n");
+            printf('\nDireção:\n');
             for j = 1:n-m
-                printf("d%d -> %.5g\n", j, -u(j));
+                printf('d%d -> %.5g\n', j, -u(j));
             endfor
 
-            printf("\nEntra da base: %d\n", l);
+            printf('\nEntra da base: %d\n', l);
 
             x(k) = theta;
             for i = 1:n-m
@@ -119,7 +119,7 @@ function A = le_matriz(arq, m, n)
     A = zeros(m, n);
     for i = 1:m
         for j = 1:n
-            A(i, j) = fscanf(arq, "%f", 1);
+            A(i, j) = fscanf(arq, '%f', 1);
         endfor
     endfor
 
@@ -128,15 +128,15 @@ endfunction
 
 # ------------------------------------------------------------- #
 
-printf("===========================\n")
-printf("===   Simplex: Fase 2   ===\n")
-printf("===========================\n");
+printf('===========================\n')
+printf('===   Simplex: Fase 2   ===\n')
+printf('===========================\n');
 
 nome_arq = argv(){1};
-arq = fopen(nome_arq, "r");
+arq = fopen(nome_arq, 'r');
 
-m = fscanf(arq, "%f", 1)
-n = fscanf(arq, "%f", 1)
+m = fscanf(arq, '%f', 1)
+n = fscanf(arq, '%f', 1)
 
 A = le_matriz(arq, m, n)
 b = le_matriz(arq, m, 1)
@@ -146,17 +146,17 @@ x = le_matriz(arq, n, 1)
 [inv v] = simplex(A, b, c, m, n, x);
 
 if (inv == -1)
-    printf("\nO problema é ilimitado!\n");
+    printf('\nO problema é ilimitado!\n');
 else
     custo = transpose(c) * v;
-    printf("\nSolução ótima encontrada com custo %.5g:\n", custo);
+    printf('\nSolução ótima encontrada com custo %.5g:\n', custo);
 endif
 
 for j = 1:n
     if (inv == -1)
-        printf("d");
+        printf('d');
     else
-        printf("x");
+        printf('x');
     endif
-    printf("%d -> %.5g\n", j, v(j));
+    printf('%d -> %.5g\n', j, v(j));
 endfor
