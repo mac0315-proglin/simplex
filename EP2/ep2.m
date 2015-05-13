@@ -3,63 +3,73 @@
 
 function [ind v] = simplex(A, b, c, m, n, x)
 
-    ind = cont = 0;
+    cont = 0;
+    B = cst_r = [];
 
     # Monta vetor de índices básicos
-    B = [];
-    k = 1;
+    k = 0;
     for j = 1:n
-        if (x(j) > 0)
-            B(k++) = j;
+        if x(j) > 0
+            B(++k) = j;
         end
+    end
+
+    if k ~= m
+        printf('\nERRO: x não é solução básica\n');
+        exit();
     end
 
     # Valor inicial de B^-1
     B_inv = inv(A(:, B));
 
-    # Custos reduzidos
-    cst_r = [];
+    # TODO: existe um jeito de deixar a condição mais bonita?
+    while (ind ~= 0) and (ind ~= -1)
 
-    # Pré-calcula p para evitar operações desnecessárias
-    p = (transpose(c(B)) * B_inv
+        printf('\nIterando %d\n', cont++);
+        printf('-----------\n');
+        printf('\nValor função objetivo: %f\n', transpose(c) * x);
 
-    while (ind != 0 && ind != -1)
+        # Pré-calculo a fim de evitar operações desnecessárias
+        p = (transpose(c(B))) * B_inv;
 
+        ind = 0;
         for j = 1:n
-            if (x(j) > 0)
+            if x(j) > 0
                 printf('x%d -> %.5g\n', j, x(j));
             else
-                if (size(B_inv) == 0)
-                    continue;
-                end
+                # VERIFICAR se esta condição é necessária (caso extremo)
+                #if (size(B_inv) == 0)
+                #    continue;
+                #end
+                # Calcula custo reduzido
                 cst_r(j) = c(j) - (p * A(:, j));
-                if (cst_r(j) < 0)
+
+                # Se negativo, continua o algoritmo
+                if cst_r(j) < 0
                     ind = 1;
                     k = j;
                 end
             end
         end
 
-        printf('\nIterando %d\n', cont++);
-        printf('-----------\n');
-
-        printf('\nValor função objetivo: %d\n', transpose(c) * x);
-
         printf('\nCustos reduzidos:\n');
-        for j = 1:n
-            if (x(j) == 0)
-                printf('c%d -> %.5g\n', j, cst_r(j));
+        for i = 1:m
+            if (x(B(i)) == 0)
+                printf('c%d -> %.5g\n', i, cst_r(i));
             end
         end
 
-        if (ind == 0)
+        if ind == 0
+            # Se todos cst_r forem positivos, encontramos uma solução ótima
             v = x;
 
         else
+            # Tomamos u como sendo -dB
             u = B_inv * A(:, k);
 
-            # Se 
-            if (u <= 0)
+            # Se nenhuma componente de u for positiva, então dB > 0.
+            # Logo, θ* = +∞ e o custo ótimo será -∞.
+            if u <= 0
                 [ind v] = deal(-1, -u);
 
             else
@@ -67,25 +77,31 @@ function [ind v] = simplex(A, b, c, m, n, x)
 
                 [theta l] = calcula_theta(x, u, m, n, B);
 
+                if theta == 0
+                    printf('\nERRO: Encontrada solução básica degenerada. ');
+                    printf('Verifique sua entrada.\n');
+                    exit();
+                end
+
                 printf('\nTheta*\n');
                 printf('%.5g\n', theta);
 
                 printf('\nDireção:\n');
-                for j = 1:n-m
-                    printf('d%d -> %.5g\n', j, -u(j));
+                for i = 1:m
+                    printf('d%d -> %.5g\n', i, -u(i));
                 end
 
                 printf('\nEntra da base: %d\n', l);
 
+                # Atualiza o valor de x com a nova s.v.b encontrada
                 x(k) = theta;
-                for i = 1:n-m
+                for i = 1:m
                     x(B(i)) -= theta * u(i);
                 end
-                x(l) = 0;
 
+                # Atualiza matrizes A e B^-1
                 A(:, B(l)) = A(:, k);
-
-                B_inv = calcula_inv(B_inv, u, l)
+                B_inv = calcula_inv(B_inv, u, m, l);
             end
         end
     end
@@ -101,20 +117,22 @@ function [theta l] = calcula_theta(x, u, m, n, B)
             continue;
         end
         valor = x(B(i)) / u(i);
-        if (valor < theta)
+        if valor < theta
             [theta l] = deal(valor, i);
         end
     end
 end
 
 
-function B_inv = calcula_inv(B_inv, u, l)
+function B_inv = calcula_inv(B_inv, u, m, l)
 
-    for j = [1:(l-1), (l+1):m]
-        k = -u(i)/u(l)
-        B_inv(i) += -k * B_inv(l)
+    for i = [1:(l-1), (l+1):m]
+        k = -u(i) / u(l);
+        B_inv(i) += -k * B_inv(l);
     end
-    B_inv(l) /= u(l)
+    
+    B_inv(l) /= u(l);
+
 end
 
 
@@ -129,7 +147,7 @@ function A = le_matriz(arq, m, n)
 end
 
 
-# ------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 
 printf('===========================\n')
 printf('===   Simplex: Fase 2   ===\n')
@@ -146,22 +164,21 @@ b = le_matriz(arq, m, 1)
 c = le_matriz(arq, n, 1)
 x = le_matriz(arq, n, 1)
 
-if (not prod(A*x == b) or )
-    printf('x NÃO É UMA SOLUÇÃO VIÁVEL! Verifique sua entrada.');
-    return
+if (not (A*x == b))
+    printf('ERRO: x não é solução viável. Verifique sua entrada.');
+    exit()
 end
 
 [inv v] = simplex(A, b, c, m, n, x);
 
-if (inv == -1)
+if inv == -1
     printf('\nO problema tem custo ótimo -∞\n');
 else
-    custo = transpose(c) * v;
-    printf('\nSolução ótima encontrada com custo %.5g:\n', custo);
+    printf('\nSolução ótima encontrada com custo %.5g:\n', transpose(c) * v);
 end
 
 for j = 1:n
-    if (inv == -1)
+    if inv == -1
         printf('d');
     else
         printf('x');
