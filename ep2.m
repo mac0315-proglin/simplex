@@ -114,11 +114,14 @@ function [ind v] = simplex(A, b, c, m, n, x)
                 # Atualiza matrizes A e B⁻¹
                 A(:, B(l)) = A(:, k);
                 B_inv = calcula_inv(B_inv, u, m, l);
+
+                # Atualiza e ordena vetor de índices básicos
+                B(:, B(l)) = A(:, k);
+                sort(B);
             end
         end
     end
 end
-
 
 #
 #  Recebe um ponto x em R^n, direção u e um conjunto B de m índices.
@@ -137,7 +140,6 @@ function [theta l] = calcula_theta(x, u, m, n, B)
     end
 end
 
-
 #
 #  Recebe uma matriz B⁻¹, um vetor u e índices m e l.
 #  Calcula a nova inversa de B (com a coluna de índice l sendo agora u) por
@@ -154,7 +156,6 @@ function B_inv = calcula_inv(B_inv, u, m, l)
     B_inv(l) /= u(l);
 end
 
-
 #
 #  Lê arquivo e devolve matriz de tamanho m x n.
 #
@@ -167,7 +168,6 @@ function A = le_matriz(arq, m, n)
         end
     end
 end
-
 
 #
 #  Imprime mensagem de erro.
