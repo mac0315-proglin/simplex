@@ -1,6 +1,5 @@
 #!/usr/bin/octave --silent
 
-#
 #  Método simplex revisado.
 #
 #  Recebe como parâmetros uma matriz A ∈ R^(m x n), vetores b ∈ R^m e c ∈ R^n
@@ -42,21 +41,20 @@ function [ind v] = simplex(A, b, c, m, n, x)
     
     # Roda o laço enquanto não encontrar solução ou direção ótima
     while ind != 0 && ind != -1
-        printf('\nIterando %d\n', it++);
+        printf('\n-----------\nIterando %d\n-----------\n', it++);
         for i = 1:m
-            printf('%d %f\n', B(i), x(B(i)));
+            printf('x%d = %f\n', B(i), x(B(i)));
         end
         printf('\nValor função objetivo: %f\n\n', transpose(c) * x);
-        B_inv = inv(A(:, B));
         # Pré-calcula p a fim de evitar operações desnecessárias
         p = transpose((transpose(c(B))) * B_inv);
         cst_r = zeros(n, 1);
         printf('Custos reduzidos\n');
         for j = 1:n
-            if (x(j) == 0)
+            if x(j) == 0
                 # Calcula custo reduzido
                 cst_r(j) = c(j) - transpose(p) * A(:, j);
-                printf('%d %f\n', j, cst_r(j));
+                printf('c%d = %f\n', j, cst_r(j));
             end
         end
         j = 1;
@@ -64,10 +62,6 @@ function [ind v] = simplex(A, b, c, m, n, x)
             j++;
         end
         if j > n # Se todos cst_r forem positivos, encontramos solução ótima
-            printf('\nSolução ótima encontrada com custo %f:\n', transpose(c) * x);
-            for j = 1:n
-                printf('%d %f\n', j, x(j));
-            end
             ind = 0;
             v = x;
         else # cj é negativo, então x não é ótimo; continua o algoritmo
@@ -77,11 +71,7 @@ function [ind v] = simplex(A, b, c, m, n, x)
                 # Se nenhuma componente de u for positiva, então dB > 0.
                 # Logo, θ* = +∞ e o custo ótimo será -∞.
                 v = zeros(n, 1);
-                printf('\nO custo ótimo é -infinito. Direção:\n');
-                for i = 1:m
-                    printf('%d %f\n', i, u(i));
-                    v(B(i)) = u(i);
-                end
+                v(B) = -u;
                 ind = -1;
             else
                 l = 1;
@@ -106,20 +96,12 @@ function [ind v] = simplex(A, b, c, m, n, x)
                 for i = [1:(l - 1), (l + 1):m]
                     x(B(i)) -= theta * u(i);
                 end
-                # Atualiza vetor de índices básicos, mantendo-o ordenado
-                disp(B);
-                B(l) = []; 
-                B(m, 1) = 0; # apenas para manter o tamanho
-                i = m - 1;
-                while i > 0 && B(i) > j
-                    B(i + 1) = B(i);
-                    i--;
-                end
-                B(i + 1) = j;
+                # Atualiza vetor de índices básicos
+                B(l) = j;
                 # Atualiza matriz B⁻¹ 
                 for i = [1:(l - 1), (l + 1):m]
                     k = -u(i) / u(l);
-                    B_inv(i, :) += -k * B_inv(l, :);
+                    B_inv(i, :) += k * B_inv(l, :);
                 end
                 B_inv(l, :) /= u(l);
             end
@@ -151,4 +133,14 @@ b = le_matriz(arq, m, 1);
 c = le_matriz(arq, n, 1);
 x = le_matriz(arq, n, 1);
 
-simplex(A, b, c, m, n, x);
+[ind v] = simplex(A, b, c, m, n, x);
+if ind == 0
+    printf('\nSolução ótima encontrada com custo %f:\n', transpose(c) * v);
+    vet_impr = 'x';
+else
+    printf('\nO custo ótimo é -infinito. Direção:\n');
+    vet_impr = 'd';
+end
+for j = 1:n
+    printf('%c%d = %f\n', vet_impr, j, v(j));
+end
