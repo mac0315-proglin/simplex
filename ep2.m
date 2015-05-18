@@ -101,11 +101,11 @@ function [ind v] = simplex(A, b, c, m, n, x)
 
                 printf('\n> Direção:\n');
                 for i = 1:m
-                    printf('d%d -> %.5g\n', B(i), -u(i));
+                        printf('d%d -> %.5g\n', B(i), -u(i));
                 end
 
-                printf('\n> Sai da base: (%d)', k);
-                printf('\n> Entra da base: (%d)\n', l);
+                printf('\n> Sai da base: (%d)', B(l));
+                printf('\n> Entra da base: (%d)\n', k);
 
                 % Atualiza o valor de x com a nova s.v.b encontrada
                 x(k) = theta;
