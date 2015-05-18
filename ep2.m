@@ -29,7 +29,6 @@ function [ind v] = simplex(A, b, c, m, n, x)
             B(++k) = j;
         end
     end
-
     if k > m
         erro('x não é solução viável básica\n');
     end
@@ -43,16 +42,15 @@ function [ind v] = simplex(A, b, c, m, n, x)
         printf('\n\n-------------');
         printf('\n- Iterando %d', cont++);
         printf('\n-------------\n');
-        printf('\n> Valor função objetivo: %.5g\n', transpose(c) * x);
+        printf('\n> Valor da função objetivo: %.5g\n', transpose(c) * x);
 
         % Pré-calcula p a fim de evitar operações desnecessárias
         p = (transpose(c(B))) * B_inv;
 
-        ind = num_positivos = 0;
+        ind = num_zeros = 0;
         for j = 1:n
             if x(j) > 0
                 printf('x%d -> %.5g\n', j, x(j));
-                num_positivos++;
             else
                 % Calcula custo reduzido
                 cst_r(j) = c(j) - (p * A(:, j));
@@ -62,10 +60,10 @@ function [ind v] = simplex(A, b, c, m, n, x)
                     ind = 1;
                     k = j;
                 end
-                
+                num_zeros++;
             end
         end
-        if num_positivos < m
+        if num_zeros > n-m
             erro('Encontrada s.v.b degenerada. Verifique sua entrada.');
         end
 
@@ -103,7 +101,7 @@ function [ind v] = simplex(A, b, c, m, n, x)
 
                 printf('\n> Direção:\n');
                 for i = 1:m
-                    printf('d%d -> %.5g\n', i, -u(i));
+                    printf('d%d -> %.5g\n', B(i), -u(i));
                 end
 
                 printf('\n> Sai da base: (%d)', k);
