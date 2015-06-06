@@ -13,9 +13,10 @@
 %  A função aplica o método simplex (implementação revisada) e devolve como
 %  resultado um indicador 'ind' e um valor 'v':
 %    - Caso o problema tenha solução finita, ind == 0 e v será a solução viável
-%      básica que minimiza o custo c'x.
-%    - Caso contrário, ind == -1 e v será a direção viável d na qual o problema
-%      tende ao custo -∞.
+%      básica que minimiza o custo c'x;
+%    - Caso seja ilimitado, ind == -1 e v será a direção viável d na qual o problema
+%      tende ao custo -∞;
+%    - Por fim, se o problema for inviável, ind == 1.
 %
 function [ind v] = simplex(A, b, c, m, n, x)
 
@@ -25,12 +26,21 @@ function [ind v] = simplex(A, b, c, m, n, x)
 
     % Monta vetor B de índices básicos
     for j = 1:n
+        if x(j) < 0
+            % ind = 1;
+            return;
+        end
         if x(j) > 0
             B(++k) = j;
         end
     end
     if k > m
         erro('x não é solução viável básica\n');
+    end
+
+    if not (A*x == b)
+        % ind = 1;
+        return;
     end
 
     % Toma as colunas de A correspondentes aos índices básicos e calcula B⁻¹
@@ -197,11 +207,17 @@ printf('\n\n-------------');
 printf('\n- RESULTADO -');
 printf('\n-------------\n');
 
-if ind == -1
-    printf('\n> O problema tem custo ótimo -∞\n');
-    printf('\n> Direção viável geradora:\n');
+switch (ind)
+    case -1
+        printf('\n> Solução ótima encontrada com custo %.5g:\n',
+               transpose(c) * v);
+    case 0
+        printf('\n> O problema tem custo ótimo -∞\n');
+        printf('\n> Direção viável geradora:\n');
+    case 1
+        printf('\n> O problema é inviável!\n');
 else
-    printf('\n> Solução ótima encontrada com custo %.5g:\n', transpose(c) * v);
+    
 end
 
 % Imprime resultado, isto é, a solução (ou direção) ótima
