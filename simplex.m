@@ -20,46 +20,86 @@
 %
 function [ind x d] = simplex(A, b, c, m, n)
 
+    % Multiplicando por -1 as restrições em que bi < 0
+    for i = 1:m
+        if b(i) < 0
+            A(i, :) *= -1;
+            b(i) *= -1;
+        end
+    end
+
     % Constrói o problema auxiliar
     A_aux = [A, eye(m)];
     c_aux = [zeros(n, 1); ones(m, 1)];
-    n_aux = n + m;
-    x = [zeros(1, n); b];
+    x = [zeros(n, 1); b];
 
     % Aplica a fase 1
     printf('\n===========================')
     printf('\n===   Simplex: Fase 1   ===')
     printf('\n===========================');;
-    [ind x] = simplex_body(A_aux, b, c_aux, m, n_aux, x, 1);
+    [ind x u B B_inv] = simplex_body(A_aux, b, c_aux, m, n + m, x);
 
     % O problema da fase 1 sempre é viável (pois há uma solução trivial)
     %  e sempre tem custo ótimo finito (pois é a soma de variáveis
     %  não-negativas); se o custo ótimo da fase 1 for estritamente
     %  positivo, então o problema original é inviável
-    if c_aux * x > 0
-        ind = 1
-        return
+    if transpose(c_aux) * x > 0
+        ind = 1;
+    else
+        % Retira da base as variáveis artificiais
+        l = 0;
+        while ++l <= m
+            % (l-ésima linha de B⁻¹) A
+            v = B_inv(l, :) * A;
+            j = 1;
+            while j <= m && v(j) == 0
+                j++;
+            end
+            if j > m
+                % v é nulo, então a l-ésima restrição é redundante
+                %   e é removida
+                A(l, :) = [];
+                B(l) = [];
+                m--;
+                printf("A restrição #%d do problema original era redundante.\n", l);
+                % TODO: atualizar B⁻¹ eficientemente
+                B_inv = inverse(A(:, B));
+            else 
+                % v(j) não é nulo, então x_j entra na base, x_l sai
+                u = B_inv * A(:, j);
+                for i = [1:(l-1), (l+1):m]
+                    r = -u(i) / u(l);
+                    B_inv(i, :) += r * B_inv(l, :);
+                end
+                B_inv(l, :) /= u(l);
+                % Atualiza vetor de índices básicos
+                B(l) = j;
+            end
+        end
+        x = x(1:n);
+        % Aplica a fase 2
+        printf('\n===========================')
+        printf('\n===   Simplex: Fase 2   ===')
+        printf('\n===========================');
+        [ind x u B] = simplex_body(A, b, c, m, n, x);
+        if ind == -1
+            % Monta vetor de direção
+            d = zeros(n, 1);
+            for i = 1:m
+                d(B(i)) = -u(i);
+            end
+        end
     end
-
-    % Aplica a fase 2
-    printf('\n===========================')
-    printf('\n===   Simplex: Fase 2   ===')
-    printf('\n===========================');
-    [ind x] = simplex_body(A, b, c, m, n, x, 2)
 end
 
 
-function [ind x d] = simplex_body(A, b, c, m, n, y, fase)
-    ind = 1;
+function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x)
+    ind = -2;
     cont = k = 0;
-    B = cst_r = [];
+    B = cst_r = d = u = [];
 
     % Monta vetor B de índices básicos
     for j = 1:n
-        if x(j) < 0
-            % ind = 1;
-            return;
-        end
         if x(j) > 0
             B(++k) = j;
         end
@@ -78,35 +118,33 @@ function [ind x d] = simplex_body(A, b, c, m, n, y, fase)
 
         % Pré-calcula p a fim de evitar operações desnecessárias
         p = (transpose(c(B))) * B_inv;
-
-        ind = num_zeros = 0;
+      
+        k = 0;
         for j = 1:n
-            if x(j) > 0
+            if any(B(:) == j) % se está na base
                 printf('x%d -> %.5g\n', j, x(j));
             else
                 % Calcula custo reduzido
                 cst_r(j) = c(j) - (p * A(:, j));
 
                 % Se negativo, x não é ótimo; continua o algoritmo
-                if cst_r(j) < 0
-                    ind = 1;
+                %   usando a regra do menor índice
+                if cst_r(j) < 0 && k == 0
                     k = j;
                 end
-                num_zeros++;
             end
         end
 
         printf('\n> Custos reduzidos:\n');
         for j = 1:n
-            if x(j) == 0
+            if ~ any(B(:) == j)  % se não está na base
                 printf('c%d -> %.5g\n', j, cst_r(j));
             end
         end
 
-        if ind == 0
-            % Se todos cst_r forem positivos, encontramos solução ótima
-            v = x;
-
+        if k == 0
+            % Se todos cst_r forem não negativos, encontramos solução ótima
+            ind = 0;
         else
             % Tomamos u como sendo -dB
             u = B_inv * A(:, k);
@@ -114,16 +152,7 @@ function [ind x d] = simplex_body(A, b, c, m, n, y, fase)
             if u <= 0
                 % Se nenhuma componente de u for positiva, então dB > 0.
                 % Logo, θ* = +∞ e o custo ótimo será -∞.
-
-                % Monta vetor de direção
-                d = zeros(n, 1);
-                for i = 1:m
-                    d(B(i)) = -u(i);
-                end
-                d(k) = 1;
-
-                [ind v] = deal(-1, d);
-
+                ind = -1;
             else
                 [theta l] = calcula_theta(x, u, m, n, B);
                 printf('\n> Theta*: (%.5g)\n', theta);
@@ -146,9 +175,9 @@ function [ind x d] = simplex_body(A, b, c, m, n, y, fase)
                 % elementares entre as linhas e o vetor u (simplex revisado).
                 for i = [1:(l-1), (l+1):m]
                     r = -u(i) / u(l);
-                    B_inv(i) += -r * B_inv(l);
+                    B_inv(i, :) += r * B_inv(l, :);
                 end
-                B_inv(l) /= u(l);
+                B_inv(l, :) /= u(l);
 
                 % Atualiza vetor de índices básicos
                 B(l) = k;
@@ -211,6 +240,7 @@ n = fscanf(arq, '%f', 1);
 A = le_matriz(arq, m, n);
 b = le_matriz(arq, m, 1);
 c = le_matriz(arq, n, 1);
+fclose(arq);
 
 % Chamada da função
 [ind v] = simplex(A, b, c, m, n);
@@ -220,24 +250,24 @@ printf('\n- RESULTADO -');
 printf('\n-------------\n');
 
 switch (ind)
-    case -1
+    case 0
         printf('\n> Solução ótima encontrada com custo %.5g:\n',
                transpose(c) * v);
-    case 0
+    case -1
         printf('\n> O problema tem custo ótimo -∞\n');
         printf('\n> Direção viável geradora:\n');
     case 1
         printf('\n> O problema é inviável!\n');
-else
-    
 end
 
 % Imprime resultado, isto é, a solução (ou direção) ótima
-for j = 1:n
-    if ind == -1
-        printf('d');
-    else
-        printf('x');
+if ind != 1
+    for j = 1:n
+        if ind == -1
+            printf('d');
+        else
+            printf('x');
+        end
+        printf('%d -> %.5g\n', j, v(j));
     end
-    printf('%d -> %.5g\n', j, v(j));
 end
