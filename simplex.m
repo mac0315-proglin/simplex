@@ -20,22 +20,32 @@
 %
 function [ind x d] = simplex(A, b, c, m, n)
 
-    % Constroi o problema auxiliar
+    % Constrói o problema auxiliar
     A_aux = [A, eye(m)];
-    c_aux = ones(m, 1);
+    c_aux = [zeros(n, 1); ones(m, 1)];
     n_aux = n + m;
-    x = cat(zeros(1, n), b);
+    x = [zeros(1, n); b];
 
-    % Aplica a fase
-    [ind x] = simplex_body(A_aux, b, c_aux, m, n, x, 1);
+    % Aplica a fase 1
+    printf('\n===========================')
+    printf('\n===   Simplex: Fase 1   ===')
+    printf('\n===========================');;
+    [ind x] = simplex_body(A_aux, b, c_aux, m, n_aux, x, 1);
 
-    if ind == 1
-        return;
+    % O problema da fase 1 sempre é viável (pois há uma solução trivial)
+    %  e sempre tem custo ótimo finito (pois é a soma de variáveis
+    %  não-negativas); se o custo ótimo da fase 1 for estritamente
+    %  positivo, então o problema original é inviável
+    if c_aux * x > 0
+        ind = 1
+        return
     end
 
+    % Aplica a fase 2
+    printf('\n===========================')
+    printf('\n===   Simplex: Fase 2   ===')
+    printf('\n===========================');
     [ind x] = simplex_body(A, b, c, m, n, x, 2)
-
-
 end
 
 
@@ -53,14 +63,6 @@ function [ind x d] = simplex_body(A, b, c, m, n, y, fase)
         if x(j) > 0
             B(++k) = j;
         end
-    end
-    if k > m
-        erro('x não é solução viável básica\n');
-    end
-
-    if not (A*x == b)
-        % ind = 1;
-        return;
     end
 
     % Toma as colunas de A correspondentes aos índices básicos e calcula B⁻¹
@@ -92,9 +94,6 @@ function [ind x d] = simplex_body(A, b, c, m, n, y, fase)
                 end
                 num_zeros++;
             end
-        end
-        if num_zeros > n-m
-            erro('Encontrada s.v.b degenerada. Verifique sua entrada.');
         end
 
         printf('\n> Custos reduzidos:\n');
@@ -200,9 +199,7 @@ end
 
 % -----------------------------------------------------------------------------
 
-printf('\n===========================')
-printf('\n===   Simplex: Fase 2   ===')
-printf('\n===========================');
+
 
 % Abre o arquivo
 nome_arq = argv(){1};
@@ -214,14 +211,9 @@ n = fscanf(arq, '%f', 1);
 A = le_matriz(arq, m, n);
 b = le_matriz(arq, m, 1);
 c = le_matriz(arq, n, 1);
-x = le_matriz(arq, n, 1);
-
-if not (A*x == b)
-    erro('x não é solução viável. Verifique sua entrada.');
-end
 
 % Chamada da função
-[ind v] = simplex(A, b, c, m, n, x);
+[ind v] = simplex(A, b, c, m, n);
 
 printf('\n\n-------------');
 printf('\n- RESULTADO -');
