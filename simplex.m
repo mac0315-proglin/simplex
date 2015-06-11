@@ -4,23 +4,23 @@
 %  Método simplex revisado.
 %
 %  Recebe como parâmetros uma matriz A ∈ R^(m x n), vetores b ∈ R^m e c ∈ R^n
-%  e um ponto x ∈ R^n, representando o seguinte problema no formato padrão:
+%  representando o seguinte problema no formato padrão:
 %
 %      Minimizar c'x
 %      Sujeito a Ax = b
 %                 x ≥ 0
 %
 %  A função aplica o método simplex (implementação revisada) e devolve como
-%  resultado um indicador 'ind' e um valor 'v':
-%    - Caso o problema tenha solução finita, ind == 0 e v será a solução viável
+%  resultado um indicador 'ind', bem como possíveis valores 'x' e 'd':
+%    - Caso o problema tenha solução finita, ind == 0 e x será a solução viável
 %      básica que minimiza o custo c'x;
-%    - Caso seja ilimitado, ind == -1 e v será a direção viável d na qual o problema
-%      tende ao custo -∞;
+%    - Caso seja ilimitado, ind == -1 e d será a direção viável na qual
+%      o problema tende ao custo -∞;
 %    - Por fim, se o problema for inviável, ind == 1.
 %
 function [ind x d] = simplex(A, b, c, m, n)
 
-    % Multiplicando por -1 as restrições em que bi < 0
+    % Multiplicando por -1 as restrições em que b(i) < 0
     for i = 1:m
         if b(i) < 0
             A(i, :) *= -1;
@@ -33,37 +33,42 @@ function [ind x d] = simplex(A, b, c, m, n)
     c_aux = [zeros(n, 1); ones(m, 1)];
     x = [zeros(n, 1); b];
 
-    % Aplica a fase 1
     printf('\n===========================')
     printf('\n===   Simplex: Fase 1   ===')
     printf('\n===========================');;
     [ind x u B B_inv] = simplex_body(A_aux, b, c_aux, m, n + m, x);
 
     % O problema da fase 1 sempre é viável (pois há uma solução trivial)
-    %  e sempre tem custo ótimo finito (pois é a soma de variáveis
-    %  não-negativas); se o custo ótimo da fase 1 for estritamente
-    %  positivo, então o problema original é inviável
+    % e sempre tem custo ótimo finito (pois é a soma de variáveis
+    % não-negativas); se o custo ótimo da fase 1 for estritamente
+    % positivo, então o problema original é inviável
     if transpose(c_aux) * x > 0
         ind = 1;
+
     else
         % Retira da base as variáveis artificiais
-        l = 0;
-        while ++l <= m
+        for l = 1:m
+
             % (l-ésima linha de B⁻¹) A
             v = B_inv(l, :) * A;
-            j = 1;
-            while j <= m && v(j) == 0
-                j++;
+
+            for j = 1:m
+                if v(j) == 0
+                    break;
+                end
             end
+
             if j > m
-                % v é nulo, então a l-ésima restrição é redundante
-                %   e é removida
+                % v é nulo, então a l-ésima restrição é redundante e é removida
                 A(l, :) = [];
                 B(l) = [];
-                m--;
-                printf("A restrição #%d do problema original era redundante.\n", l);
+                m -= 1;
+
+                printf('A restrição #%d do problema original era redundante.\n', l);
+                
                 % TODO: atualizar B⁻¹ eficientemente
                 B_inv = inverse(A(:, B));
+
             else 
                 % v(j) não é nulo, então x_j entra na base, x_l sai
                 u = B_inv * A(:, j);
@@ -76,12 +81,14 @@ function [ind x d] = simplex(A, b, c, m, n)
                 B(l) = j;
             end
         end
+
         x = x(1:n);
-        % Aplica a fase 2
+
         printf('\n===========================')
         printf('\n===   Simplex: Fase 2   ===')
         printf('\n===========================');
         [ind x u B] = simplex_body(A, b, c, m, n, x);
+
         if ind == -1
             % Monta vetor de direção
             d = zeros(n, 1);
@@ -92,8 +99,11 @@ function [ind x d] = simplex(A, b, c, m, n)
     end
 end
 
-
+%
+% Núcleo das iterações das fases do método simplex.
+%
 function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x)
+
     ind = -2;
     cont = k = 0;
     B = cst_r = d = u = [];
@@ -128,7 +138,7 @@ function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x)
                 cst_r(j) = c(j) - (p * A(:, j));
 
                 % Se negativo, x não é ótimo; continua o algoritmo
-                %   usando a regra do menor índice
+                % usando a regra do menor índice
                 if cst_r(j) < 0 && k == 0
                     k = j;
                 end
@@ -145,6 +155,7 @@ function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x)
         if k == 0
             % Se todos cst_r forem não negativos, encontramos solução ótima
             ind = 0;
+
         else
             % Tomamos u como sendo -dB
             u = B_inv * A(:, k);
@@ -153,6 +164,7 @@ function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x)
                 % Se nenhuma componente de u for positiva, então dB > 0.
                 % Logo, θ* = +∞ e o custo ótimo será -∞.
                 ind = -1;
+
             else
                 [theta l] = calcula_theta(x, u, m, n, B);
                 printf('\n> Theta*: (%.5g)\n', theta);
@@ -228,8 +240,6 @@ end
 
 % -----------------------------------------------------------------------------
 
-
-
 % Abre o arquivo
 nome_arq = argv(){1};
 arq = fopen(nome_arq, 'r');
@@ -252,7 +262,7 @@ printf('\n-------------\n');
 switch (ind)
     case 0
         printf('\n> Solução ótima encontrada com custo %.5g:\n',
-               transpose(c) * v);
+                    transpose(c) * v);
     case -1
         printf('\n> O problema tem custo ótimo -∞\n');
         printf('\n> Direção viável geradora:\n');
@@ -261,7 +271,7 @@ switch (ind)
 end
 
 % Imprime resultado, isto é, a solução (ou direção) ótima
-if ind != 1
+if ind ~= 1
     for j = 1:n
         if ind == -1
             printf('d');
