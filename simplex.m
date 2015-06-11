@@ -18,8 +18,28 @@
 %      tende ao custo -∞;
 %    - Por fim, se o problema for inviável, ind == 1.
 %
-function [ind v] = simplex(A, b, c, m, n, x)
+function [ind x d] = simplex(A, b, c, m, n)
 
+    % Constroi o problema auxiliar
+    A_aux = [A, eye(m)];
+    c_aux = ones(m, 1);
+    n_aux = n + m;
+    x = cat(zeros(1, n), b);
+
+    % Aplica a fase
+    [ind x] = simplex_body(A_aux, b, c_aux, m, n, x, 1);
+
+    if ind == 1
+        return;
+    end
+
+    [ind x] = simplex_body(A, b, c, m, n, x, 2)
+
+
+end
+
+
+function [ind x d] = simplex_body(A, b, c, m, n, y, fase)
     ind = 1;
     cont = k = 0;
     B = cst_r = [];
