@@ -47,15 +47,15 @@ function [ind x d] = simplex(A, b, c, m, n)
 
     else
         % Retira da base as variáveis artificiais
-        for l = 1:m
+        l = 0
+        while ++l <= m
 
             % (l-ésima linha de B⁻¹) A
             v = B_inv(l, :) * A;
 
-            for j = 1:m
-                if v(j) == 0
-                    break;
-                end
+            j = 1;
+            while j <= m && v(j) == 0
+                j++;
             end
 
             if j > m
