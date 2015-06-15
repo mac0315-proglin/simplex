@@ -19,6 +19,8 @@
 %    - Por fim, se o problema for inviável, ind == 1.
 %
 function [ind x d] = simplex(A, b, c, m, n)
+    
+    d = [];
 
     % Multiplicando por -1 as restrições em que b(i) < 0
     for i = 1:m
@@ -66,7 +68,7 @@ function [ind x d] = simplex(A, b, c, m, n)
             if j > n
                 % v é nulo, então a l-ésima restrição é redundante e é removida
                 A(l, :) = [];
-                printf('Removida restrição redundante do problema original.\n', l);
+                printf('\nRemovida restrição redundante do problema original.\n', l);
                 B(l) = [];
                 m -= 1;
                 B_inv(l, :) = [];
@@ -90,22 +92,15 @@ function [ind x d] = simplex(A, b, c, m, n)
         printf('\n===========================')
         printf('\n===   Simplex: Fase 2   ===')
         printf('\n===========================');
-        [ind x u B] = simplex_body(A, b, c, m, n, x, B, B_inv);
+        [ind x d B] = simplex_body(A, b, c, m, n, x, B, B_inv);
 
-        if ind == -1
-            % Monta vetor de direção
-            d = zeros(n, 1);
-            for i = 1:m
-                d(B(i)) = -u(i);
-            end
-        end
     end
 end
 
 %
 % Núcleo das iterações das fases do método simplex.
 %
-function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
+function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
     ind = -2;
     cont = k = 0;
     cst_r = d = u = [];
@@ -147,7 +142,6 @@ function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
         if k == 0
             % Se todos cst_r forem não negativos, encontramos solução ótima
             ind = 0;
-
         else
             % Tomamos u como sendo -dB
             u = B_inv * A(:, k);
@@ -156,7 +150,12 @@ function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
                 % Se nenhuma componente de u for positiva, então dB > 0.
                 % Logo, θ* = +∞ e o custo ótimo será -∞.
                 ind = -1;
-
+                % Monta vetor de direção
+                d = zeros(n, 1);
+                for i = 1:m
+                    d(B(i)) = -u(i);
+                end
+                d(k) = 1;
             else
                 [theta l] = calcula_theta(x, u, m, n, B);
                 printf('\n> Theta*: (%.5g)\n', theta);
@@ -245,7 +244,7 @@ c = le_matriz(arq, n, 1);
 fclose(arq);
 
 % Chamada da função
-[ind v] = simplex(A, b, c, m, n);
+[ind x d] = simplex(A, b, c, m, n);
 
 printf('\n\n-------------');
 printf('\n- RESULTADO -');
@@ -254,7 +253,7 @@ printf('\n-------------\n');
 switch (ind)
     case 0
         printf('\n> Solução ótima encontrada com custo %.5g:\n',
-                    transpose(c) * v);
+                    transpose(c) * x);
     case -1
         printf('\n> O problema tem custo ótimo -∞\n');
         printf('\n> Direção viável geradora:\n');
@@ -266,10 +265,9 @@ end
 if ind ~= 1
     for j = 1:n
         if ind == -1
-            printf('d');
+            printf('d%d -> %.5g\n', j, d(j));
         else
-            printf('x');
+            printf('x%d -> %.5g\n', j, x(j));
         end
-        printf('%d -> %.5g\n', j, v(j));
     end
 end
