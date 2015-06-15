@@ -124,7 +124,7 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
         k = 0;
         for j = 1:n
             if any(B(:) == j) % se está na base
-                printf('x%d -> %.5g\n', j, x(j));
+                printf('x%s -> %.5g\n', subscrito(j), x(j));
             else
                 % Calcula custo reduzido
                 cst_r(j) = c(j) - (p * A(:, j));
@@ -140,7 +140,7 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
         printf('\n> Custos reduzidos:\n');
         for j = 1:n
             if ~ any(B(:) == j)  % se não está na base
-                printf('c%d -> %.5g\n', j, cst_r(j));
+                printf('C%s -> %.5g\n', subscrito(j), cst_r(j));
             end
         end
 
@@ -167,7 +167,7 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
 
                 printf('\n> Direção:\n');
                 for i = 1:m
-                    printf('d%d -> %.5g\n', B(i), -u(i));
+                    printf('d%s -> %.5g\n', subscrito(B(i)), -u(i));
                 end
 
                 printf('\n> Sai da base: (%d)', B(l));
@@ -212,7 +212,46 @@ function [theta l] = calcula_theta(x, u, m, n, B)
     end
 end
 
+function [a] = algs(i) 
+    switch(i)
+        case 1
+            a = "₁";
+        case 2
+            a = "₂";
+        case 3
+            a = "₃";
+        case 4
+            a = "₄";
+        case 5
+            a = "₅";
+        case 6
+            a = "₆";
+        case 7
+            a = "₇";
+        case 8
+            a = "₈";
+        case 9
+            a = "₉";
+        otherwise
+            a = "₀";
+    end
+end
 
+function [subs] = subscrito_r(i)
+    algarismo = mod(i, 10);
+    if i < 10
+        subs = algs(algarismo);
+    else
+        subs = [subscrito_r(idivide(i, 10)), algs(algarismo)];
+    end
+end
+
+function [subs] = subscrito(i)
+    subs = subscrito_r(i);
+    if i < 10
+        subs = ["₀", subs];
+    end
+end
 
 function imprime_tableau(A, B, b, B_inv, c)
     [m n] = size(A);
@@ -221,7 +260,7 @@ function imprime_tableau(A, B, b, B_inv, c)
     B_inv_A = B_inv * A;
     printf("\n\n                    ");
     for j=1:n
-        printf("   x%02d  ", j);
+        printf("   x%s  ", subscrito(j));
     end
     printf("\n%s", hifens);
     printf("      | %7.3f  |  ", -transpose(c(B)) * B_inv_b);
@@ -229,7 +268,7 @@ function imprime_tableau(A, B, b, B_inv, c)
     printf(" |\n");
     printf("%s", hifens);
     for i=1:m
-        printf("x%02d = | %7.3f  |  ", B(i), B_inv_b(i));
+        printf("x%s = | %7.3f  |  ", subscrito(B(i)), B_inv_b(i));
         printf("%7.3f ", B_inv_A(i, :));
         printf(" |\n");
     end
@@ -294,9 +333,10 @@ end
 if ind ~= 1
     for j = 1:n
         if ind == -1
-            printf('d%d -> %.5g\n', j, d(j));
+            printf('d%s -> %.5g\n', subscrito(j), d(j));
         else
-            printf('x%d -> %.5g\n', j, x(j));
+            printf('x%s -> %.5g\n', subscrito(j), x(j));
         end
     end
 end
+
