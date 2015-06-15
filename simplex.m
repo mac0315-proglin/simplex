@@ -32,11 +32,13 @@ function [ind x d] = simplex(A, b, c, m, n)
     A_aux = [A, eye(m)];
     c_aux = [zeros(n, 1); ones(m, 1)];
     x = [zeros(n, 1); b];
+    B = (n + 1):(n + m);
+    B_inv = eye(m);
 
     printf('\n===========================')
     printf('\n===   Simplex: Fase 1   ===')
     printf('\n===========================');;
-    [ind x u B B_inv] = simplex_body(A_aux, b, c_aux, m, n + m, x);
+    [ind x u B B_inv] = simplex_body(A_aux, b, c_aux, m, n + m, x, B, B_inv);
 
     % O problema da fase 1 sempre é viável (pois há uma solução trivial)
     % e sempre tem custo ótimo finito (pois é a soma de variáveis
@@ -44,31 +46,31 @@ function [ind x d] = simplex(A, b, c, m, n)
     % positivo, então o problema original é inviável
     if transpose(c_aux) * x > 0
         ind = 1;
-
     else
         % Retira da base as variáveis artificiais
-        l = 0
-        while ++l <= m
-
-            % (l-ésima linha de B⁻¹) A
+        l = 1;
+        while l <= m
+            if B(l) <= n % não é artificial, nada a fazer
+                l++;
+                continue;
+            end
+            % v = (l-ésima linha de B⁻¹)  A
             v = B_inv(l, :) * A;
 
+            % procurar elemento não nulo de v
             j = 1;
-            while j <= m && v(j) == 0
+            while j <= n && v(j) == 0
                 j++;
             end
 
-            if j > m
+            if j > n
                 % v é nulo, então a l-ésima restrição é redundante e é removida
                 A(l, :) = [];
                 B(l) = [];
                 m -= 1;
-
-                printf('A restrição #%d do problema original era redundante.\n', l);
-                
-                % TODO: atualizar B⁻¹ eficientemente
-                B_inv = inverse(A(:, B));
-
+                printf('Removida restrição redundante (#%d) do problema original.\n', l);
+                B_inv(l, :) = [];
+                B_inv(:, l) = [];
             else 
                 % v(j) não é nulo, então x_j entra na base, x_l sai
                 u = B_inv * A(:, j);
@@ -79,6 +81,7 @@ function [ind x d] = simplex(A, b, c, m, n)
                 B_inv(l, :) /= u(l);
                 % Atualiza vetor de índices básicos
                 B(l) = j;
+                l++;
             end
         end
 
@@ -87,7 +90,7 @@ function [ind x d] = simplex(A, b, c, m, n)
         printf('\n===========================')
         printf('\n===   Simplex: Fase 2   ===')
         printf('\n===========================');
-        [ind x u B] = simplex_body(A, b, c, m, n, x);
+        [ind x u B] = simplex_body(A, b, c, m, n, x, B, B_inv);
 
         if ind == -1
             % Monta vetor de direção
@@ -102,21 +105,10 @@ end
 %
 % Núcleo das iterações das fases do método simplex.
 %
-function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x)
-
+function [ind x u B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
     ind = -2;
     cont = k = 0;
-    B = cst_r = d = u = [];
-
-    % Monta vetor B de índices básicos
-    for j = 1:n
-        if x(j) > 0
-            B(++k) = j;
-        end
-    end
-
-    % Toma as colunas de A correspondentes aos índices básicos e calcula B⁻¹
-    B_inv = inv(A(:, B));
+    cst_r = d = u = [];
 
     % Roda o laço enquanto não encontrar solução ou direção ótima
     while (ind ~= 0) && (ind ~= -1)
