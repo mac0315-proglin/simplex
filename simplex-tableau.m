@@ -249,7 +249,7 @@ end
 function [subs] = subscrito(i)
     subs = subscrito_r(i);
     if i < 10
-        subs = ["₀", subs];
+        subs = [subs, " "];
     end
 end
 
@@ -263,13 +263,13 @@ function imprime_tableau(A, B, b, B_inv, c)
         printf("   x%s  ", subscrito(j));
     end
     printf("\n%s", hifens);
-    printf("      | %7.3f  |  ", -transpose(c(B)) * B_inv_b);
-    printf("%7.3f ", transpose(c) - transpose(c(B)) * B_inv_A);
+    printf("      | %7.3g  |  ", -transpose(c(B)) * B_inv_b);
+    printf("%7.3g ", transpose(c) - transpose(c(B)) * B_inv_A);
     printf(" |\n");
     printf("%s", hifens);
     for i=1:m
-        printf("x%s = | %7.3f  |  ", subscrito(B(i)), B_inv_b(i));
-        printf("%7.3f ", B_inv_A(i, :));
+        printf("x%s = | %7.3g  |  ", subscrito(B(i)), B_inv_b(i));
+        printf("%7.3g ", B_inv_A(i, :));
         printf(" |\n");
     end
     printf("%s\n", hifens);
