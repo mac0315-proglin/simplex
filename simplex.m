@@ -40,7 +40,7 @@ function [ind x d] = simplex(A, b, c, m, n)
     printf('\n===========================')
     printf('\n===   Simplex: Fase 1   ===')
     printf('\n===========================');;
-    [ind x u B B_inv] = simplex_body(A_aux, b, c_aux, m, n + m, x, B, B_inv);
+    [ind x u B B_inv] = simplex_body(A_aux, b, c_aux, m, n + m, x, B, B_inv, n);
 
     % O problema da fase 1 sempre é viável (pois há uma solução trivial)
     % e sempre tem custo ótimo finito (pois é a soma de variáveis
@@ -92,7 +92,7 @@ function [ind x d] = simplex(A, b, c, m, n)
         printf('\n===========================')
         printf('\n===   Simplex: Fase 2   ===')
         printf('\n===========================');
-        [ind x d B] = simplex_body(A, b, c, m, n, x, B, B_inv);
+        [ind x d B] = simplex_body(A, b, c, m, n, x, B, B_inv, n);
 
     end
 end
@@ -100,7 +100,7 @@ end
 %
 % Núcleo das iterações das fases do método simplex.
 %
-function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
+function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv, max_pivot)
     ind = -2;
     cont = k = 0;
     cst_r = d = u = [];
@@ -139,7 +139,7 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
             end
         end
 
-        if k == 0
+        if k == 0 || k > max_pivot
             % Se todos cst_r forem não negativos, encontramos solução ótima
             ind = 0;
         else

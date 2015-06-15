@@ -6,14 +6,14 @@
 %  Recebe como parâmetros uma matriz A ∈ R^(m x n), vetores b ∈ R^m e c ∈ R^n
 %  representando o seguinte problema no formato padrão:
 %
-%      Minimizar c'x
+%      Minimizar c"x
 %      Sujeito a Ax = b
 %                 x ≥ 0
 %
 %  A função aplica o método simplex (implementação revisada) e devolve como
-%  resultado um indicador 'ind', bem como possíveis valores 'x' e 'd':
+%  resultado um indicador "ind", bem como possíveis valores "x" e "d":
 %    - Caso o problema tenha solução finita, ind == 0 e x será a solução viável
-%      básica que minimiza o custo c'x;
+%      básica que minimiza o custo c"x;
 %    - Caso seja ilimitado, ind == -1 e d será a direção viável na qual
 %      o problema tende ao custo -∞;
 %    - Por fim, se o problema for inviável, ind == 1.
@@ -37,10 +37,10 @@ function [ind x d] = simplex(A, b, c, m, n)
     B = (n + 1):(n + m);
     B_inv = eye(m);
 
-    printf('\n===========================')
-    printf('\n===   Simplex: Fase 1   ===')
-    printf('\n===========================');;
-    [ind x u B B_inv] = simplex_body(A_aux, b, c_aux, m, n + m, x, B, B_inv);
+    printf("\n===========================")
+    printf("\n===   Simplex: Fase 1   ===")
+    printf("\n===========================");;
+    [ind x u B B_inv] = simplex_body(A_aux, b, c_aux, m, n + m, x, B, B_inv, n);
 
     % O problema da fase 1 sempre é viável (pois há uma solução trivial)
     % e sempre tem custo ótimo finito (pois é a soma de variáveis
@@ -71,7 +71,7 @@ function [ind x d] = simplex(A, b, c, m, n)
                 A(l, :) = [];
                 A_aux(l, :) = [];
                 b(l) = [];
-                printf('\nRemovida restrição redundante do problema original.\n', l);
+                printf("\nRemovida restrição redundante do problema original.\n", l);
                 B(l) = [];
                 m -= 1;
                 B_inv(l, :) = [];
@@ -94,10 +94,10 @@ function [ind x d] = simplex(A, b, c, m, n)
 
         x = x(1:n);
 
-        printf('\n===========================')
-        printf('\n===   Simplex: Fase 2   ===')
-        printf('\n===========================');
-        [ind x d B] = simplex_body(A, b, c, m, n, x, B, B_inv);
+        printf("\n===========================")
+        printf("\n===   Simplex: Fase 2   ===")
+        printf("\n===========================");
+        [ind x d B] = simplex_body(A, b, c, m, n, x, B, B_inv, n);
 
     end
 end
@@ -105,7 +105,7 @@ end
 %
 % Núcleo das iterações das fases do método simplex.
 %
-function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
+function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv, max_pivot)
     ind = -2;
     cont = k = 0;
     cst_r = d = u = [];
@@ -113,10 +113,10 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
     % Roda o laço enquanto não encontrar solução ou direção ótima
     while (ind ~= 0) && (ind ~= -1)
 
-        printf('\n\n-------------');
-        printf('\n- Iterando %d', cont++);
-        printf('\n-------------\n');
-        printf('\n> Valor da função objetivo: %.5g\n', transpose(c) * x);
+        printf("\n\n-------------");
+        printf("\n- Iterando %d", cont++);
+        printf("\n-------------\n");
+        printf("\n> Valor da função objetivo: %.5g\n", transpose(c) * x);
 
         imprime_tableau(A, B, b, B_inv, c);
         % Pré-calcula p a fim de evitar operações desnecessárias
@@ -124,7 +124,7 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
         k = 0;
         for j = 1:n
             if any(B(:) == j) % se está na base
-                printf('x%s -> %.5g\n', subscrito(j), x(j));
+                printf("x%s -> %.5g\n", subscrito(j), x(j));
             else
                 % Calcula custo reduzido
                 cst_r(j) = c(j) - (p * A(:, j));
@@ -137,14 +137,14 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
             end
         end
 
-        printf('\n> Custos reduzidos:\n');
+        printf("\n> Custos reduzidos:\n");
         for j = 1:n
             if ~ any(B(:) == j)  % se não está na base
-                printf('C%s -> %.5g\n', subscrito(j), cst_r(j));
+                printf("C%s -> %.5g\n", subscrito(j), cst_r(j));
             end
         end
 
-        if k == 0
+        if k == 0 || k > max_pivot
             % Se todos cst_r forem não negativos, encontramos solução ótima
             ind = 0;
         else
@@ -163,15 +163,15 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv)
                 d(k) = 1;
             else
                 [theta l] = calcula_theta(x, u, m, n, B);
-                printf('\n> Theta*: (%.5g)\n', theta);
+                printf("\n> Theta*: (%.5g)\n", theta);
 
-                printf('\n> Direção:\n');
+                printf("\n> Direção:\n");
                 for i = 1:m
-                    printf('d%s -> %.5g\n', subscrito(B(i)), -u(i));
+                    printf("d%s -> %.5g\n", subscrito(B(i)), -u(i));
                 end
 
-                printf('\n> Sai da base: (%d)', B(l));
-                printf('\n> Entra na base: (%d)\n', k);
+                printf("\n> Sai da base: (%d)", B(l));
+                printf("\n> Entra na base: (%d)\n", k);
 
                 % Atualiza o valor de x com a nova s.v.b encontrada
                 x(k) = theta;
@@ -283,7 +283,7 @@ function A = le_matriz(arq, m, n)
     A = zeros(m, n);
     for i = 1:m
         for j = 1:n
-            A(i, j) = fscanf(arq, '%f', 1);
+            A(i, j) = fscanf(arq, "%f", 1);
         end
     end
 end
@@ -293,7 +293,7 @@ end
 %
 function erro(msg)
 
-    printf('\n[ERRO]\n> %s', msg);
+    printf("\n[ERRO]\n> %s", msg);
     exit();
 end
 
@@ -301,11 +301,11 @@ end
 
 % Abre o arquivo
 nome_arq = argv(){1};
-arq = fopen(nome_arq, 'r');
+arq = fopen(nome_arq, "r");
 
 % Leitura da entrada
-m = fscanf(arq, '%f', 1);
-n = fscanf(arq, '%f', 1);
+m = fscanf(arq, "%f", 1);
+n = fscanf(arq, "%f", 1);
 A = le_matriz(arq, m, n);
 b = le_matriz(arq, m, 1);
 c = le_matriz(arq, n, 1);
@@ -314,28 +314,28 @@ fclose(arq);
 % Chamada da função
 [ind x d] = simplex(A, b, c, m, n);
 
-printf('\n\n-------------');
-printf('\n- RESULTADO -');
-printf('\n-------------\n');
+printf("\n\n-------------");
+printf("\n- RESULTADO -");
+printf("\n-------------\n");
 
 switch (ind)
     case 0
-        printf('\n> Solução ótima encontrada com custo %.5g:\n',
+        printf("\n> Solução ótima encontrada com custo %.5g:\n",
                     transpose(c) * x);
     case -1
-        printf('\n> O problema tem custo ótimo -∞\n');
-        printf('\n> Direção viável geradora:\n');
+        printf("\n> O problema tem custo ótimo -∞\n");
+        printf("\n> Direção viável geradora:\n");
     case 1
-        printf('\n> O problema é inviável!\n');
+        printf("\n> O problema é inviável!\n");
 end
 
 % Imprime resultado, isto é, a solução (ou direção) ótima
 if ind ~= 1
     for j = 1:n
         if ind == -1
-            printf('d%s -> %.5g\n', subscrito(j), d(j));
+            printf("d%s -> %.5g\n", subscrito(j), d(j));
         else
-            printf('x%s -> %.5g\n', subscrito(j), x(j));
+            printf("x%s -> %.5g\n", subscrito(j), x(j));
         end
     end
 end
