@@ -66,9 +66,9 @@ function [ind x d] = simplex(A, b, c, m, n)
             if j > n
                 % v é nulo, então a l-ésima restrição é redundante e é removida
                 A(l, :) = [];
+                printf('Removida restrição redundante do problema original.\n', l);
                 B(l) = [];
                 m -= 1;
-                printf('Removida restrição redundante (#%d) do problema original.\n', l);
                 B_inv(l, :) = [];
                 B_inv(:, l) = [];
             else 
