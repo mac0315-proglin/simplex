@@ -22,7 +22,8 @@ function [ind x d] = simplex(A, b, c, m, n)
     
     d = [];
 
-    % Multiplicando por -1 as restrições em que b(i) < 0
+    % Multiplicamos por -1 as restrições em que b(i) < 0.
+    % Assim, garante-se que b >= 0.
     for i = 1:m
         if b(i) < 0
             A(i, :) *= -1;
@@ -37,63 +38,74 @@ function [ind x d] = simplex(A, b, c, m, n)
     B = (n + 1):(n + m);
     B_inv = eye(m);
 
+    % Aplica a Fase 1 no problema auxiliar
     printf('\n===========================')
     printf('\n===   Simplex: Fase 1   ===')
     printf('\n===========================');;
     [ind x u B B_inv] = simplex_body(A_aux, b, c_aux, m, n + m, x, B, B_inv, n);
 
-    % O problema da fase 1 sempre é viável (pois há uma solução trivial)
-    % e sempre tem custo ótimo finito (pois é a soma de variáveis
-    % não-negativas); se o custo ótimo da fase 1 for estritamente
-    % positivo, então o problema original é inviável
     if transpose(c_aux) * x > 0
+        % Se o custo ótimo da Fase 1 for positivo,
+        % então o problema original é inviável.
         ind = 1;
+
     else
-        % Retira da base as variáveis artificiais
+        % Caso contrário, retiramos da base as variáveis artificiais
+
+        % Percorre-se os índices da base
         l = 1;
         while l <= m
-            if B(l) <= n % não é artificial, nada a fazer
+
+            % Se não for artificial, nada a fazer
+            if B(l) <= n
                 l++;
                 continue;
             end
-            % v = (l-ésima linha de B⁻¹)  A
+
+            % v = l-ésima coluna de B⁻¹A
             v = B_inv(l, :) * A;
 
-            % procurar elemento não nulo de v
+            % Procura-se elemento não nulo de v
             j = 1;
             while j <= n && v(j) == 0
                 j++;
             end
 
             if j > n
-                % v é nulo, então a l-ésima restrição é redundante e é removida
+                % v é nulo, então a l-ésima restrição
+                % é redundante e pode ser removida.
                 A(l, :) = [];
-                printf('\nRemovida restrição redundante do problema original.\n', l);
                 B(l) = [];
-                m -= 1;
                 B_inv(l, :) = [];
                 B_inv(:, l) = [];
+                m -= 1;
+
+                printf('\nRemovida restrição redundante.\n', l);                
+
             else 
-                % v(j) não é nulo, então x_j entra na base, x_l sai
+                % v(j) não é nulo, então x(j) entra na base, x(l) sai
+
                 u = B_inv * A(:, j);
+
+                % Atualiza B⁻¹ pelo método revisado
                 for i = [1:(l-1), (l+1):m]
                     r = -u(i) / u(l);
                     B_inv(i, :) += r * B_inv(l, :);
                 end
                 B_inv(l, :) /= u(l);
-                % Atualiza vetor de índices básicos
-                B(l) = j;
-                l++;
+
+                B(l++) = j;
             end
         end
 
+        % Elimina as variáveis artificiais do jogo
         x = x(1:n);
 
+        % Aplica a Fase 2 do método simplex na base e s.v.b encontradas
         printf('\n===========================')
         printf('\n===   Simplex: Fase 2   ===')
         printf('\n===========================');
         [ind x d B] = simplex_body(A, b, c, m, n, x, B, B_inv, n);
-
     end
 end
 
@@ -101,6 +113,7 @@ end
 % Núcleo das iterações das fases do método simplex.
 %
 function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv, max_pivot)
+
     ind = -2;
     cont = k = 0;
     cst_r = d = u = [];
@@ -108,7 +121,7 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv, max_pivot)
     % Roda o laço enquanto não encontrar solução ou direção ótima
     while (ind ~= 0) && (ind ~= -1)
 
-        printf('\n\n-------------');
+        printf('\n-------------');
         printf('\n- Iterando %d', cont++);
         printf('\n-------------\n');
         printf('\n> Valor da função objetivo: %.5g\n', transpose(c) * x);
@@ -142,6 +155,7 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv, max_pivot)
         if k == 0 || k > max_pivot
             % Se todos cst_r forem não negativos, encontramos solução ótima
             ind = 0;
+
         else
             % Tomamos u como sendo -dB
             u = B_inv * A(:, k);
@@ -150,12 +164,14 @@ function [ind x d B B_inv] = simplex_body(A, b, c, m, n, x, B, B_inv, max_pivot)
                 % Se nenhuma componente de u for positiva, então dB > 0.
                 % Logo, θ* = +∞ e o custo ótimo será -∞.
                 ind = -1;
+
                 % Monta vetor de direção
                 d = zeros(n, 1);
                 for i = 1:m
                     d(B(i)) = -u(i);
                 end
                 d(k) = 1;
+
             else
                 [theta l] = calcula_theta(x, u, m, n, B);
                 printf('\n> Theta*: (%.5g)\n', theta);
